@@ -1,0 +1,26 @@
+{
+  "analysis_type": "recommendations",
+  "user_history": [
+    {"post_id": "post1", "action": "like", "timestamp": 1734567890},
+    {"post_id": "post2", "action": "repost", "timestamp": 1734567900},
+    {"post_id": "post3", "action": "reply", "timestamp": 1734567910}
+  ],
+  "candidates": [
+    {
+      "post_id": "cand1",
+      "text": "Breaking: Major AI breakthrough in machine learning announced today!",
+      "author_id": "tech_news_user"
+    },
+    {
+      "post_id": "cand2",
+      "text": "Just had a great lunch at the new restaurant downtown.",
+      "author_id": "foodie_user"
+    },
+    {
+      "post_id": "cand3",
+      "text": "New tech startup raises $100M for AI-powered analytics platform.",
+      "author_id": "startup_news"
+    }
+  ],
+  "top_k": 3
+}
