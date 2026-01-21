@@ -8,7 +8,12 @@ Run this file to start the agent server.
 """
 import os
 from dotenv import load_dotenv
-from masumi import run
+try:
+    from masumi import run
+except ImportError:
+    # Fallback for older masumi versions
+    from masumi import create_masumi_app, MasumiAgentServer
+    run = None
 from agent import process_job
 
 # Load environment variables from .env file
@@ -110,8 +115,33 @@ INPUT_SCHEMA = {
 if __name__ == "__main__":
     # Config and identifiers loaded from environment variables
     # Default mode is API - use --standalone flag to run standalone
-    run(
-        start_job_handler=process_job,
-        input_schema_handler=INPUT_SCHEMA
-        # config, agent_identifier, network loaded from env vars automatically
-    )
+
+    if run is not None:
+        # New API (masumi >= 0.1.42)
+        run(
+            start_job_handler=process_job,
+            input_schema_handler=INPUT_SCHEMA
+        )
+    else:
+        # Fallback for older versions
+        import uvicorn
+        from masumi import Config
+
+        config = Config(
+            agent_identifier=os.getenv("AGENT_IDENTIFIER", "x-analyst"),
+            seller_vkey=os.getenv("SELLER_VKEY", ""),
+            payment_api_key=os.getenv("PAYMENT_API_KEY", ""),
+            network=os.getenv("NETWORK", "Preprod"),
+            payment_service_url=os.getenv("PAYMENT_SERVICE_URL", "")
+        )
+
+        app = create_masumi_app(
+            start_job_handler=process_job,
+            input_schema=INPUT_SCHEMA,
+            config=config
+        )
+
+        host = os.getenv("HOST", "0.0.0.0")
+        port = int(os.getenv("PORT", 8080))
+
+        uvicorn.run(app, host=host, port=port)
