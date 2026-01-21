@@ -7,17 +7,15 @@ This is the entry point for your Masumi agent.
 Run this file to start the agent server.
 """
 import os
+import sys
 from dotenv import load_dotenv
-try:
-    from masumi import run
-except ImportError:
-    # Fallback for older masumi versions
-    from masumi import create_masumi_app, MasumiAgentServer
-    run = None
 from agent import process_job
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Check for standalone mode
+STANDALONE = "--standalone" in sys.argv
 
 # Define input schema
 # Masumi expects {"input_data": [...]} format for MIP-003 compliance
@@ -113,35 +111,48 @@ INPUT_SCHEMA = {
 
 # Main entry point
 if __name__ == "__main__":
-    # Config and identifiers loaded from environment variables
-    # Default mode is API - use --standalone flag to run standalone
+    if STANDALONE:
+        # Standalone mode - for testing without blockchain
+        import asyncio
+        import json
 
-    if run is not None:
-        # New API (masumi >= 0.1.42)
-        run(
+        async def test_standalone():
+            print("\n=== X-Analyst Standalone Mode ===")
+            print("Enter job input (JSON format):")
+            print('Example: {"text": "This is amazing!", "analysis_type": "sentiment"}')
+
+            try:
+                input_str = input("\nInput: ")
+                input_data = json.loads(input_str)
+
+                print("\nProcessing...")
+                result = await process_job("standalone-test-id", input_data)
+
+                print("\n=== Result ===")
+                print(json.dumps(result, indent=2))
+            except json.JSONDecodeError as e:
+                print(f"Invalid JSON: {e}")
+            except Exception as e:
+                print(f"Error: {e}")
+
+        asyncio.run(test_standalone())
+    else:
+        # API mode - use MasumiAgentServer directly
+        import uvicorn
+        from masumi import MasumiAgentServer
+
+        # Create server (reads config from environment variables)
+        server = MasumiAgentServer(
             start_job_handler=process_job,
             input_schema_handler=INPUT_SCHEMA
         )
-    else:
-        # Fallback for older versions
-        import uvicorn
-        from masumi import Config
 
-        config = Config(
-            agent_identifier=os.getenv("AGENT_IDENTIFIER", "x-analyst"),
-            seller_vkey=os.getenv("SELLER_VKEY", ""),
-            payment_api_key=os.getenv("PAYMENT_API_KEY", ""),
-            network=os.getenv("NETWORK", "Preprod"),
-            payment_service_url=os.getenv("PAYMENT_SERVICE_URL", "")
-        )
+        # Get FastAPI app
+        app = server.app
 
-        app = create_masumi_app(
-            start_job_handler=process_job,
-            input_schema=INPUT_SCHEMA,
-            config=config
-        )
-
+        # Run server
         host = os.getenv("HOST", "0.0.0.0")
         port = int(os.getenv("PORT", 8080))
 
+        print(f"Starting X-Analyst on {host}:{port}")
         uvicorn.run(app, host=host, port=port)
