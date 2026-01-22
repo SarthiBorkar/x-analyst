@@ -157,14 +157,14 @@ if __name__ == "__main__":
         # (for older masumi versions that don't have run())
         host = os.getenv("HOST", "0.0.0.0")
         port = int(os.getenv("PORT", "8080"))
-        agent_identifier = os.getenv("AGENT_IDENTIFIER", "x-analyst-demo")
+        agent_identifier = os.getenv("AGENT_IDENTIFIER")  # Optional - will warn if not set
         network = os.getenv("NETWORK", "Preprod")
-        seller_vkey = os.getenv("SELLER_VKEY")
+        seller_vkey = os.getenv("SELLER_VKEY")  # REQUIRED in updated masumi
         payment_service_url = os.getenv("PAYMENT_SERVICE_URL")
         payment_api_key = os.getenv("PAYMENT_API_KEY")
 
         # Check if we have payment service configuration
-        has_payment_service = payment_service_url and payment_api_key
+        has_payment_service = payment_service_url and payment_api_key and seller_vkey
 
         if has_payment_service:
             # Full Masumi Mode - with payment verification
@@ -202,12 +202,19 @@ if __name__ == "__main__":
 
         else:
             # Fallback Mode - without payment verification (for testing)
+            # Note: Updated masumi requires SELLER_VKEY even for fallback mode
+            # If SELLER_VKEY is missing, we'll run a basic FastAPI without MasumiAgentServer
             print("\n" + "="*70)
             print("⚠️  Running in FALLBACK MODE - basic FastAPI without payment verification")
             print("="*70)
-            print("To enable full Masumi Mode, set PAYMENT_SERVICE_URL and PAYMENT_API_KEY")
+            if not seller_vkey:
+                print("⚠️  WARNING: SELLER_VKEY not set - MasumiAgentServer requires it")
+                print("   Running basic FastAPI without Masumi integration")
+            else:
+                print("⚠️  Missing PAYMENT_SERVICE_URL or PAYMENT_API_KEY")
+                print("   Running basic FastAPI without payment verification")
             print(f"Python Version:           {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
-            print(f"Agent Identifier:         {agent_identifier}")
+            print(f"Agent Identifier:         {agent_identifier or 'unregistered-agent'}")
             print(f"Network:                  {network}")
             print(f"API Documentation:        http://{host}:{port}/docs")
             print(f"Availability Check:       http://{host}:{port}/availability")
