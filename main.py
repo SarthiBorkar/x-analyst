@@ -48,9 +48,7 @@ INPUT_SCHEMA = {
                 "values": ["sentiment", "summary", "stats", "keywords", "recommendations", "general"],
                 "default": "general"
             },
-            "validations": [
-                {"validation": "required", "value": "true"}
-            ]
+            "validations": []
         },
         {
             "id": "text",
@@ -70,29 +68,34 @@ INPUT_SCHEMA = {
             "type": "text",
             "name": "User Engagement History",
             "data": {
-                "description": "Required for recommendations: JSON array of user's past engagements",
+                "description": "Optional: Required only for recommendations analysis. JSON array of user's past engagements",
                 "placeholder": '[{"post_id": "post1", "action": "like", "timestamp": 1734567890}]'
             },
-            "validations": []
+            "validations": [
+                {"validation": "optional", "value": "true"}
+            ]
         },
         {
             "id": "candidates",
             "type": "text",
             "name": "Candidate Posts",
             "data": {
-                "description": "Required for recommendations: JSON array of posts to rank",
+                "description": "Optional: Required only for recommendations analysis. JSON array of posts to rank",
                 "placeholder": '[{"post_id": "cand1", "text": "Breaking news about AI", "author_id": "user123", "media_type": "text"}]'
             },
-            "validations": []
+            "validations": [
+                {"validation": "optional", "value": "true"}
+            ]
         },
         {
             "id": "max_keywords",
             "type": "number",
             "name": "Maximum Keywords",
             "data": {
-                "description": "Maximum number of keywords to extract (1-100, default: 10)"
+                "description": "Optional: Maximum number of keywords to extract (1-100, default: 10)"
             },
             "validations": [
+                {"validation": "optional", "value": "true"},
                 {"validation": "min", "value": "1"},
                 {"validation": "max", "value": "100"},
                 {"validation": "format", "value": "integer"}
@@ -103,9 +106,10 @@ INPUT_SCHEMA = {
             "type": "number",
             "name": "Summary Sentences",
             "data": {
-                "description": "Number of sentences in summary (1-20, default: 3)"
+                "description": "Optional: Number of sentences in summary (1-20, default: 3)"
             },
             "validations": [
+                {"validation": "optional", "value": "true"},
                 {"validation": "min", "value": "1"},
                 {"validation": "max", "value": "20"},
                 {"validation": "format", "value": "integer"}
@@ -116,9 +120,10 @@ INPUT_SCHEMA = {
             "type": "number",
             "name": "Top K Recommendations",
             "data": {
-                "description": "Number of top recommendations to return (1-100, default: 10)"
+                "description": "Optional: Number of top recommendations to return (1-100, default: 10)"
             },
             "validations": [
+                {"validation": "optional", "value": "true"},
                 {"validation": "min", "value": "1"},
                 {"validation": "max", "value": "100"},
                 {"validation": "format", "value": "integer"}
