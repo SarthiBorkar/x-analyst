@@ -8,14 +8,24 @@ Supports sentiment analysis, summarization, statistics, keywords, and Phoenix re
 import os
 import sys
 
-# Try new API first (local dev), fallback to stable API (PyPI)
+# Ensure Python 3.9+
+if sys.version_info < (3, 9):
+    print(f"ERROR: Python 3.9+ required, found {sys.version_info.major}.{sys.version_info.minor}")
+    sys.exit(1)
+
+# Import masumi with detailed error handling
 try:
-    from masumi import run
-    USE_NEW_API = True
-except ImportError:
-    from masumi import create_masumi_app, Config
+    from masumi import run, create_masumi_app, Config
     import uvicorn
-    USE_NEW_API = False
+    print("✓ Successfully imported masumi (version 0.1.41+)")
+except ImportError as e:
+    print(f"ERROR: Failed to import masumi: {e}")
+    print("\nTroubleshooting:")
+    print("1. Verify masumi is installed: pip show masumi")
+    print("2. Check version: pip show masumi | grep Version")
+    print("3. Reinstall: pip install --no-cache-dir masumi>=0.1.41")
+    print("4. Python version: python --version (need 3.9+)")
+    sys.exit(1)
 
 from agent import process_job
 
@@ -113,54 +123,27 @@ INPUT_SCHEMA = {
 
 # Main entry point
 if __name__ == "__main__":
-    if USE_NEW_API:
-        # New API (local dev with latest masumi)
-        run(
-            start_job_handler=process_job,
-            input_schema_handler=INPUT_SCHEMA
-        )
-    else:
-        # Stable API (PyPI masumi 0.1.41)
-        from dotenv import load_dotenv
-        load_dotenv()
+    # Load environment variables
+    from dotenv import load_dotenv
+    load_dotenv()
 
-        # Get environment variables
-        payment_service_url = os.getenv(
-            "PAYMENT_SERVICE_URL",
-            "https://payment.masumi.network/api/v1"
-        )
-        payment_api_key = os.getenv("PAYMENT_API_KEY", "")
-        agent_identifier = os.getenv("AGENT_IDENTIFIER")
-        network = os.getenv("NETWORK", "Preprod")
-        host = os.getenv("HOST", "0.0.0.0")
-        port = int(os.getenv("PORT", 8080))
-        seller_vkey = os.getenv("SELLER_VKEY")
+    # Get environment variables
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8080"))
 
-        # Create config
-        config = Config(
-            payment_service_url=payment_service_url,
-            payment_api_key=payment_api_key
-        )
+    # Display startup info
+    print("\n" + "="*70)
+    print("🚀 Starting X-Analyst Agent Server...")
+    print("="*70)
+    print(f"Python Version:           {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+    print(f"API Documentation:        http://{host}:{port}/docs")
+    print(f"Availability Check:       http://{host}:{port}/availability")
+    print(f"Input Schema:             http://{host}:{port}/input_schema")
+    print(f"Start Job:                http://{host}:{port}/start_job")
+    print("="*70 + "\n")
 
-        # Create FastAPI app
-        app = create_masumi_app(
-            config=config,
-            agent_identifier=agent_identifier,
-            network=network,
-            seller_vkey=seller_vkey,
-            start_job_handler=process_job,
-            input_schema_handler=INPUT_SCHEMA
-        )
-
-        # Display startup info
-        print("\n" + "="*70)
-        print("🚀 Starting X-Analyst Agent Server...")
-        print("="*70)
-        print(f"API Documentation:        http://{host}:{port}/docs")
-        print(f"Availability Check:       http://{host}:{port}/availability")
-        print(f"Input Schema:             http://{host}:{port}/input_schema")
-        print(f"Start Job:                http://{host}:{port}/start_job")
-        print("="*70 + "\n")
-
-        # Run server
-        uvicorn.run(app, host=host, port=port)
+    # Use the simplified run() API (available in masumi 0.1.41)
+    run(
+        start_job_handler=process_job,
+        input_schema_handler=INPUT_SCHEMA
+    )

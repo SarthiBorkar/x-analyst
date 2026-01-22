@@ -1,13 +1,17 @@
-# Masumi payment network integration
-masumi>=0.1.41
-python-dotenv
+# Python 3.9+ required - see runtime.txt
+
+# Masumi payment network integration (requires 0.1.41+ for run() API)
+masumi==0.1.41
+python-dotenv>=1.0.0
 uvicorn>=0.27.0
+fastapi>=0.109.0
 
 # Phoenix ML model dependencies (optional - install for recommendations)
-jax==0.8.1
-dm-haiku>=0.0.13
-numpy>=1.26.4
+# Uncomment below if you want to use ML-based recommendations
+# jax==0.8.1
+# dm-haiku>=0.0.13
+# numpy>=1.26.4
 
-# Additional utilities
+# Additional utilities for production (optional)
 # redis  # Uncomment for caching in production
 # prometheus-client  # Uncomment for metrics monitoring
