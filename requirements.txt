@@ -1,7 +1,13 @@
 # Python 3.9+ required - see runtime.txt
 
 # Masumi payment network integration (requires 0.1.41+ for run() API)
-masumi==0.1.41
+# Option 1: Install from PyPI (if updated version is published)
+#masumi==0.1.41
+
+# Option 2: Install from git repository (using updated version)
+# Using HTTPS format (works on Railway and local)
+# For local development with SSH keys, you can use: git+ssh://git@github.com/masumi-network/pip-masumi.git
+git+https://github.com/masumi-network/pip-masumi.git
 python-dotenv>=1.0.0
 uvicorn>=0.27.0
 fastapi>=0.109.0

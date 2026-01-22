@@ -8,24 +8,37 @@ Supports sentiment analysis, summarization, statistics, keywords, and Phoenix re
 import os
 import sys
 
+# Load environment variables FIRST, before any other imports
+# This ensures .env file is loaded before masumi package tries to read env vars
+from dotenv import load_dotenv
+load_dotenv()
+
 # Ensure Python 3.9+
 if sys.version_info < (3, 9):
     print(f"ERROR: Python 3.9+ required, found {sys.version_info.major}.{sys.version_info.minor}")
     sys.exit(1)
 
 # Import masumi with detailed error handling
+# Try to import the simplified run() API first (available in updated masumi)
 try:
-    from masumi import run, create_masumi_app, Config
-    import uvicorn
-    print("✓ Successfully imported masumi (version 0.1.41+)")
-except ImportError as e:
-    print(f"ERROR: Failed to import masumi: {e}")
-    print("\nTroubleshooting:")
-    print("1. Verify masumi is installed: pip show masumi")
-    print("2. Check version: pip show masumi | grep Version")
-    print("3. Reinstall: pip install --no-cache-dir masumi>=0.1.41")
-    print("4. Python version: python --version (need 3.9+)")
-    sys.exit(1)
+    from masumi import run
+    print("✓ Successfully imported masumi.run() (simplified API)")
+    USE_RUN_API = True
+except ImportError:
+    # Fallback to MasumiAgentServer if run() is not available
+    try:
+        from masumi import MasumiAgentServer, Config
+        import uvicorn
+        print("✓ Successfully imported masumi (using MasumiAgentServer API)")
+        USE_RUN_API = False
+    except ImportError as e:
+        print(f"ERROR: Failed to import masumi: {e}")
+        print("\nTroubleshooting:")
+        print("1. Verify masumi is installed: pip show masumi")
+        print("2. Check version: pip show masumi | grep Version")
+        print("3. Reinstall: pip install --no-cache-dir masumi>=0.1.41")
+        print("4. Python version: python --version (need 3.9+)")
+        sys.exit(1)
 
 from agent import process_job
 
@@ -123,27 +136,123 @@ INPUT_SCHEMA = {
 
 # Main entry point
 if __name__ == "__main__":
-    # Load environment variables
-    from dotenv import load_dotenv
-    load_dotenv()
+    # Environment variables are already loaded at the top of the file
+    # (masumi.run() also loads dotenv internally, but loading early ensures consistency)
+    
+    if USE_RUN_API:
+        # Use the simplified run() API (available in updated masumi)
+        # This automatically handles:
+        # - Config creation from environment variables
+        # - MasumiAgentServer initialization
+        # - FastAPI app creation
+        # - Server startup with uvicorn
+        run(
+            start_job_handler=process_job,
+            input_schema_handler=INPUT_SCHEMA
+            # All other config (host, port, agent_identifier, network, etc.)
+            # is automatically loaded from environment variables
+        )
+    else:
+        # Fallback to manual MasumiAgentServer initialization
+        # (for older masumi versions that don't have run())
+        host = os.getenv("HOST", "0.0.0.0")
+        port = int(os.getenv("PORT", "8080"))
+        agent_identifier = os.getenv("AGENT_IDENTIFIER", "x-analyst-demo")
+        network = os.getenv("NETWORK", "Preprod")
+        seller_vkey = os.getenv("SELLER_VKEY")
+        payment_service_url = os.getenv("PAYMENT_SERVICE_URL")
+        payment_api_key = os.getenv("PAYMENT_API_KEY")
 
-    # Get environment variables
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", "8080"))
+        # Check if we have payment service configuration
+        has_payment_service = payment_service_url and payment_api_key
 
-    # Display startup info
-    print("\n" + "="*70)
-    print("🚀 Starting X-Analyst Agent Server...")
-    print("="*70)
-    print(f"Python Version:           {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
-    print(f"API Documentation:        http://{host}:{port}/docs")
-    print(f"Availability Check:       http://{host}:{port}/availability")
-    print(f"Input Schema:             http://{host}:{port}/input_schema")
-    print(f"Start Job:                http://{host}:{port}/start_job")
-    print("="*70 + "\n")
+        if has_payment_service:
+            # Full Masumi Mode - with payment verification
+            print("\n" + "="*70)
+            print("🚀 Starting X-Analyst Agent Server (Full Masumi Mode)...")
+            print("="*70)
+            print(f"Python Version:           {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+            print(f"Agent Identifier:        {agent_identifier}")
+            print(f"Network:                 {network}")
+            print(f"API Documentation:        http://{host}:{port}/docs")
+            print(f"Availability Check:       http://{host}:{port}/availability")
+            print(f"Input Schema:             http://{host}:{port}/input_schema")
+            print(f"Start Job:                http://{host}:{port}/start_job")
+            print("="*70 + "\n")
 
-    # Use the simplified run() API (available in masumi 0.1.41)
-    run(
-        start_job_handler=process_job,
-        input_schema_handler=INPUT_SCHEMA
-    )
+            # Create Config with required parameters
+            config = Config(
+                payment_service_url=payment_service_url,
+                payment_api_key=payment_api_key
+            )
+
+            # Create MasumiAgentServer with config
+            server = MasumiAgentServer(
+                config=config,
+                agent_identifier=agent_identifier,
+                network=network,
+                seller_vkey=seller_vkey,
+                start_job_handler=process_job,
+                input_schema_handler=INPUT_SCHEMA
+            )
+
+            # Get FastAPI app and run with uvicorn
+            app = server.app
+            uvicorn.run(app, host=host, port=port)
+
+        else:
+            # Fallback Mode - without payment verification (for testing)
+            print("\n" + "="*70)
+            print("⚠️  Running in FALLBACK MODE - basic FastAPI without payment verification")
+            print("="*70)
+            print("To enable full Masumi Mode, set PAYMENT_SERVICE_URL and PAYMENT_API_KEY")
+            print(f"Python Version:           {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+            print(f"Agent Identifier:         {agent_identifier}")
+            print(f"Network:                  {network}")
+            print(f"API Documentation:        http://{host}:{port}/docs")
+            print(f"Availability Check:       http://{host}:{port}/availability")
+            print(f"Input Schema:             http://{host}:{port}/input_schema")
+            print(f"Start Job:                http://{host}:{port}/start_job")
+            print("="*70 + "\n")
+
+            # Create a simple FastAPI app for fallback mode
+            from fastapi import FastAPI, HTTPException
+            from fastapi.responses import JSONResponse
+
+            app = FastAPI(title="X-Analyst Agent (Fallback Mode)")
+
+            @app.get("/availability")
+            async def availability():
+                return {"status": "available", "mode": "fallback"}
+
+            @app.get("/input_schema")
+            async def input_schema():
+                return INPUT_SCHEMA
+
+            @app.post("/start_job")
+            async def start_job(request: dict):
+                try:
+                    identifier_from_purchaser = request.get("identifier_from_purchaser", "fallback_user")
+                    input_data = request.get("input_data", {})
+                    
+                    result = await process_job(identifier_from_purchaser, input_data)
+                    return result
+                except Exception as e:
+                    raise HTTPException(status_code=500, detail=str(e))
+
+            @app.get("/")
+            async def root():
+                return {
+                    "service": "X-Analyst Agent",
+                    "mode": "fallback",
+                    "status": "running",
+                    "endpoints": {
+                        "availability": "/availability",
+                        "input_schema": "/input_schema",
+                        "start_job": "/start_job (POST)"
+                    }
+                }
+
+            print("✓ Fallback FastAPI app initialized")
+            print(f"🚀 Starting X-Analyst on {host}:{port}\n")
+            uvicorn.run(app, host=host, port=port)
