@@ -19,26 +19,19 @@ if sys.version_info < (3, 9):
     sys.exit(1)
 
 # Import masumi with detailed error handling
-# Try to import the simplified run() API first (available in updated masumi)
 try:
-    from masumi import run
-    print("✓ Successfully imported masumi.run() (simplified API)")
-    USE_RUN_API = True
-except ImportError:
-    # Fallback to MasumiAgentServer if run() is not available
-    try:
-        from masumi import MasumiAgentServer, Config
-        import uvicorn
-        print("✓ Successfully imported masumi (using MasumiAgentServer API)")
-        USE_RUN_API = False
-    except ImportError as e:
-        print(f"ERROR: Failed to import masumi: {e}")
-        print("\nTroubleshooting:")
-        print("1. Verify masumi is installed: pip show masumi")
-        print("2. Check version: pip show masumi | grep Version")
-        print("3. Reinstall: pip install --no-cache-dir masumi>=0.1.41")
-        print("4. Python version: python --version (need 3.9+)")
-        sys.exit(1)
+    from masumi import create_masumi_app, Config
+    from fastapi.middleware.cors import CORSMiddleware
+    import uvicorn
+    print("✓ Successfully imported masumi")
+except ImportError as e:
+    print(f"ERROR: Failed to import required packages: {e}")
+    print("\nTroubleshooting:")
+    print("1. Verify masumi is installed: pip show masumi")
+    print("2. Check version: pip show masumi | grep Version")
+    print("3. Reinstall: pip install --no-cache-dir masumi>=0.1.41")
+    print("4. Python version: python --version (need 3.9+)")
+    sys.exit(1)
 
 from agent import process_job
 
@@ -137,22 +130,61 @@ INPUT_SCHEMA = {
 # Main entry point
 if __name__ == "__main__":
     # Environment variables are already loaded at the top of the file
-    # (masumi.run() also loads dotenv internally, but loading early ensures consistency)
-    
-    if USE_RUN_API:
-        # Use the simplified run() API (available in updated masumi)
-        # This automatically handles:
-        # - Config creation from environment variables
-        # - MasumiAgentServer initialization
-        # - FastAPI app creation
-        # - Server startup with uvicorn
-        run(
-            start_job_handler=process_job,
-            input_schema_handler=INPUT_SCHEMA
-            # All other config (host, port, agent_identifier, network, etc.)
-            # is automatically loaded from environment variables
-        )
-    else:
+
+    # Load configuration from environment
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8080"))
+    agent_identifier = os.getenv("AGENT_IDENTIFIER")
+    network = os.getenv("NETWORK", "Preprod")
+    seller_vkey = os.getenv("SELLER_VKEY")
+    payment_service_url = os.getenv("PAYMENT_SERVICE_URL", "https://payment-service.preprod.masumi.network/api/v1")
+    payment_api_key = os.getenv("PAYMENT_API_KEY", "")
+
+    # Create masumi config
+    config = Config(
+        payment_service_url=payment_service_url,
+        payment_api_key=payment_api_key
+    )
+
+    # Create FastAPI app with Masumi integration
+    app = create_masumi_app(
+        config=config,
+        agent_identifier=agent_identifier,
+        network=network,
+        seller_vkey=seller_vkey,
+        start_job_handler=process_job,
+        input_schema_handler=INPUT_SCHEMA
+    )
+
+    # *** ADD CORS MIDDLEWARE ***
+    # This is required for Sokosumi (browser-based UI) to fetch the schema
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow all origins (Sokosumi needs this)
+        allow_credentials=True,
+        allow_methods=["*"],  # Allow all HTTP methods
+        allow_headers=["*"],  # Allow all headers
+    )
+
+    # Display startup information
+    print("\n" + "="*70)
+    print("🚀 Starting X-Analyst Agent Server...")
+    print("="*70)
+    print(f"Python Version:           {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+    print(f"Agent Identifier:         {agent_identifier}")
+    print(f"Network:                  {network}")
+    print(f"API Documentation:        http://127.0.0.1:{port}/docs")
+    print(f"Availability Check:       http://127.0.0.1:{port}/availability")
+    print(f"Input Schema:             http://127.0.0.1:{port}/input_schema")
+    print(f"Start Job:                http://127.0.0.1:{port}/start_job")
+    print("="*70 + "\n")
+
+    # Run server
+    uvicorn.run(app, host=host, port=port)
+
+
+# OLD FALLBACK CODE (no longer used, but kept for reference)
+if False:
         # Fallback to manual MasumiAgentServer initialization
         # (for older masumi versions that don't have run())
         host = os.getenv("HOST", "0.0.0.0")
