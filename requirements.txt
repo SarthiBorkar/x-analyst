@@ -5,8 +5,9 @@
 #masumi==0.1.41
 
 # Option 2: Install from git repository (using updated version from dev branch)
-# Using SSH format for private repos, or use HTTPS: git+https://github.com/masumi-network/pip-masumi.git@dev
-git+ssh://git@github.com/masumi-network/pip-masumi.git@dev
+# Using HTTPS format (required for Railway - SSH doesn't work without keys)
+# For local development with SSH keys, you can use: git+ssh://git@github.com/masumi-network/pip-masumi.git@dev
+git+https://github.com/masumi-network/pip-masumi.git@dev
 python-dotenv>=1.0.0
 uvicorn>=0.27.0
 fastapi>=0.109.0
