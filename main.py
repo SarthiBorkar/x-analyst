@@ -5,7 +5,18 @@ X-Analyst - Main Entry Point
 AI-powered text analysis agent with Masumi payment integration.
 Supports sentiment analysis, summarization, statistics, keywords, and Phoenix recommendations.
 """
-from masumi import run
+import os
+import sys
+
+# Try new API first (local dev), fallback to stable API (PyPI)
+try:
+    from masumi import run
+    USE_NEW_API = True
+except ImportError:
+    from masumi import create_masumi_app, Config
+    import uvicorn
+    USE_NEW_API = False
+
 from agent import process_job
 
 # Define input schema
@@ -102,14 +113,54 @@ INPUT_SCHEMA = {
 
 # Main entry point
 if __name__ == "__main__":
-    # masumi.run() handles everything:
-    # - Loads .env automatically
-    # - Creates Config from environment variables
-    # - Supports --standalone mode for testing
-    # - Defaults PAYMENT_SERVICE_URL to https://payment.masumi.network/api/v1
-    # - Runs FastAPI server with beautiful logging
+    if USE_NEW_API:
+        # New API (local dev with latest masumi)
+        run(
+            start_job_handler=process_job,
+            input_schema_handler=INPUT_SCHEMA
+        )
+    else:
+        # Stable API (PyPI masumi 0.1.41)
+        from dotenv import load_dotenv
+        load_dotenv()
 
-    run(
-        start_job_handler=process_job,
-        input_schema_handler=INPUT_SCHEMA
-    )
+        # Get environment variables
+        payment_service_url = os.getenv(
+            "PAYMENT_SERVICE_URL",
+            "https://payment.masumi.network/api/v1"
+        )
+        payment_api_key = os.getenv("PAYMENT_API_KEY", "")
+        agent_identifier = os.getenv("AGENT_IDENTIFIER")
+        network = os.getenv("NETWORK", "Preprod")
+        host = os.getenv("HOST", "0.0.0.0")
+        port = int(os.getenv("PORT", 8080))
+        seller_vkey = os.getenv("SELLER_VKEY")
+
+        # Create config
+        config = Config(
+            payment_service_url=payment_service_url,
+            payment_api_key=payment_api_key
+        )
+
+        # Create FastAPI app
+        app = create_masumi_app(
+            config=config,
+            agent_identifier=agent_identifier,
+            network=network,
+            seller_vkey=seller_vkey,
+            start_job_handler=process_job,
+            input_schema_handler=INPUT_SCHEMA
+        )
+
+        # Display startup info
+        print("\n" + "="*70)
+        print("🚀 Starting X-Analyst Agent Server...")
+        print("="*70)
+        print(f"API Documentation:        http://{host}:{port}/docs")
+        print(f"Availability Check:       http://{host}:{port}/availability")
+        print(f"Input Schema:             http://{host}:{port}/input_schema")
+        print(f"Start Job:                http://{host}:{port}/start_job")
+        print("="*70 + "\n")
+
+        # Run server
+        uvicorn.run(app, host=host, port=port)
