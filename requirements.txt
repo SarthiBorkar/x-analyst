@@ -1,7 +1,5 @@
-# Masumi payment network integration
+# Masumi payment network integration (use editable install for development)
 masumi>=0.1.41
-python-dotenv
-uvicorn>=0.27.0
 
 # Phoenix ML model dependencies (optional - install for recommendations)
 jax==0.8.1
