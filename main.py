@@ -35,8 +35,7 @@ except ImportError as e:
 
 from agent import process_job
 
-# Define input schema
-# Masumi expects {"input_data": [...]} format for MIP-003 compliance
+# Define input schema - Clean and concise for better UI presentation
 INPUT_SCHEMA = {
     "input_data": [
         {
@@ -44,7 +43,7 @@ INPUT_SCHEMA = {
             "type": "option",
             "name": "Analysis Type",
             "data": {
-                "description": "Type of analysis to perform",
+                "description": "Choose the type of analysis",
                 "values": ["sentiment", "summary", "stats", "keywords", "recommendations", "general"],
                 "default": "general"
             },
@@ -53,10 +52,10 @@ INPUT_SCHEMA = {
         {
             "id": "text",
             "type": "text",
-            "name": "Text Input",
+            "name": "Text to Analyze",
             "data": {
-                "description": "Text to analyze (required for sentiment, summary, stats, keywords, general)",
-                "placeholder": "Enter text to analyze (minimum 10 characters, maximum 100,000 characters)"
+                "description": "Input text (10-100,000 chars)",
+                "placeholder": "Enter your text here..."
             },
             "validations": [
                 {"validation": "min", "value": "10"},
@@ -64,12 +63,54 @@ INPUT_SCHEMA = {
             ]
         },
         {
+            "id": "max_keywords",
+            "type": "number",
+            "name": "Max Keywords",
+            "data": {
+                "description": "Number of keywords (default: 10)",
+                "default": 10
+            },
+            "validations": [
+                {"validation": "optional", "value": "true"},
+                {"validation": "min", "value": "1"},
+                {"validation": "max", "value": "100"}
+            ]
+        },
+        {
+            "id": "summary_sentences",
+            "type": "number",
+            "name": "Summary Length",
+            "data": {
+                "description": "Number of sentences (default: 3)",
+                "default": 3
+            },
+            "validations": [
+                {"validation": "optional", "value": "true"},
+                {"validation": "min", "value": "1"},
+                {"validation": "max", "value": "20"}
+            ]
+        },
+        {
+            "id": "top_k",
+            "type": "number",
+            "name": "Top Recommendations",
+            "data": {
+                "description": "Number of results (default: 10)",
+                "default": 10
+            },
+            "validations": [
+                {"validation": "optional", "value": "true"},
+                {"validation": "min", "value": "1"},
+                {"validation": "max", "value": "100"}
+            ]
+        },
+        {
             "id": "user_history",
             "type": "text",
-            "name": "User Engagement History",
+            "name": "User History (Recommendations)",
             "data": {
-                "description": "Optional: Required only for recommendations analysis. JSON array of user's past engagements",
-                "placeholder": '[{"post_id": "post1", "action": "like", "timestamp": 1734567890}]'
+                "description": "JSON array of engagement history (optional)",
+                "placeholder": '[{"post_id":"p1","action":"like","timestamp":1734567890}]'
             },
             "validations": [
                 {"validation": "optional", "value": "true"}
@@ -78,55 +119,13 @@ INPUT_SCHEMA = {
         {
             "id": "candidates",
             "type": "text",
-            "name": "Candidate Posts",
+            "name": "Candidate Posts (Recommendations)",
             "data": {
-                "description": "Optional: Required only for recommendations analysis. JSON array of posts to rank",
-                "placeholder": '[{"post_id": "cand1", "text": "Breaking news about AI", "author_id": "user123", "media_type": "text"}]'
+                "description": "JSON array of posts to rank (optional)",
+                "placeholder": '[{"post_id":"c1","text":"AI news","author_id":"u123"}]'
             },
             "validations": [
                 {"validation": "optional", "value": "true"}
-            ]
-        },
-        {
-            "id": "max_keywords",
-            "type": "number",
-            "name": "Maximum Keywords",
-            "data": {
-                "description": "Optional: Maximum number of keywords to extract (1-100, default: 10)"
-            },
-            "validations": [
-                {"validation": "optional", "value": "true"},
-                {"validation": "min", "value": "1"},
-                {"validation": "max", "value": "100"},
-                {"validation": "format", "value": "integer"}
-            ]
-        },
-        {
-            "id": "summary_sentences",
-            "type": "number",
-            "name": "Summary Sentences",
-            "data": {
-                "description": "Optional: Number of sentences in summary (1-20, default: 3)"
-            },
-            "validations": [
-                {"validation": "optional", "value": "true"},
-                {"validation": "min", "value": "1"},
-                {"validation": "max", "value": "20"},
-                {"validation": "format", "value": "integer"}
-            ]
-        },
-        {
-            "id": "top_k",
-            "type": "number",
-            "name": "Top K Recommendations",
-            "data": {
-                "description": "Optional: Number of top recommendations to return (1-100, default: 10)"
-            },
-            "validations": [
-                {"validation": "optional", "value": "true"},
-                {"validation": "min", "value": "1"},
-                {"validation": "max", "value": "100"},
-                {"validation": "format", "value": "integer"}
             ]
         }
     ]
