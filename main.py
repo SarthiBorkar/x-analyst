@@ -109,8 +109,8 @@ INPUT_SCHEMA = {
             "type": "text",
             "name": "User History (Recommendations)",
             "data": {
-                "description": "JSON array of engagement history (optional)",
-                "placeholder": '[{"post_id":"p1","action":"like","timestamp":1734567890}]'
+                "description": "Past interactions (optional for recommendations)",
+                "placeholder": "JSON: [{\"post_id\":\"p1\",\"action\":\"like\"}]"
             },
             "validations": [
                 {"validation": "optional", "value": "true"}
@@ -121,8 +121,8 @@ INPUT_SCHEMA = {
             "type": "text",
             "name": "Candidate Posts (Recommendations)",
             "data": {
-                "description": "JSON array of posts to rank (optional)",
-                "placeholder": '[{"post_id":"c1","text":"AI news","author_id":"u123"}]'
+                "description": "Posts to rank (optional for recommendations)",
+                "placeholder": "JSON: [{\"post_id\":\"c1\",\"text\":\"content\"}]"
             },
             "validations": [
                 {"validation": "optional", "value": "true"}
