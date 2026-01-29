@@ -1,0 +1,7 @@
+{
+  "identifier_from_purchaser": "abcdef1234567890",
+  "input_data": {
+    "analysis_type": "sentiment",
+    "text": "This is an amazing product! I absolutely love it. The quality is outstanding and the service was excellent."
+  }
+}

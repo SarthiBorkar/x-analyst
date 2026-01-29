@@ -77,10 +77,37 @@ async def process_job(identifier_from_purchaser: str, input_data: Dict[str, Any]
     try:
         # Extract and validate inputs
         text = input_data.get("text", "")
-        analysis_type = input_data.get("analysis_type", "general")
+
+        # Handle analysis_type - can be string value or array index from UI
+        analysis_type_raw = input_data.get("analysis_type", "general")
+        valid_types = ["sentiment", "summary", "stats", "keywords", "recommendations", "general"]
+
+        logger.debug(f"Raw analysis_type value: {repr(analysis_type_raw)} (type: {type(analysis_type_raw).__name__})")
+
+        # If it's a number or numeric string (array index from option type), convert to value
+        if isinstance(analysis_type_raw, int):
+            # It's an index
+            analysis_type = valid_types[analysis_type_raw] if 0 <= analysis_type_raw < len(valid_types) else "general"
+        elif isinstance(analysis_type_raw, str) and analysis_type_raw.isdigit():
+            # It's a numeric string
+            idx = int(analysis_type_raw)
+            analysis_type = valid_types[idx] if 0 <= idx < len(valid_types) else "general"
+        elif isinstance(analysis_type_raw, str) and analysis_type_raw.startswith('[') and analysis_type_raw.endswith(']'):
+            # It's array notation like "[0]" - extract the index
+            try:
+                idx = int(analysis_type_raw.strip('[]'))
+                analysis_type = valid_types[idx] if 0 <= idx < len(valid_types) else "general"
+            except (ValueError, IndexError):
+                analysis_type = "general"
+        else:
+            # It's the actual string value
+            analysis_type = analysis_type_raw if analysis_type_raw in valid_types else "general"
+
+        logger.info(f"Converted analysis_type to: {analysis_type}")
+
         max_keywords = input_data.get("max_keywords", DEFAULT_TOP_KEYWORDS)
         summary_sentences = input_data.get("summary_sentences", DEFAULT_SUMMARY_SENTENCES)
-        
+
         # Parse JSON strings for recommendations (they come as text fields but need to be lists)
         if analysis_type == "recommendations":
             user_history_str = input_data.get("user_history")
@@ -180,14 +207,15 @@ def validate_input(
 
     Args:
         input_data: Full input data dictionary
-        analysis_type: Type of analysis requested
+        analysis_type: Type of analysis requested (already processed from raw value)
         max_keywords: Maximum number of keywords
         summary_sentences: Number of summary sentences
 
     Returns:
         Error message if validation fails, None if valid
     """
-    # Validate analysis type first
+    # Validate analysis type (note: analysis_type is already processed in process_job)
+    # This validation is redundant but kept for safety
     valid_types = ["sentiment", "summary", "stats", "keywords", "recommendations", "general"]
     if analysis_type not in valid_types:
         return f"Invalid analysis_type '{analysis_type}'. Must be one of: {', '.join(valid_types)}"
@@ -549,3 +577,4 @@ if __name__ == "__main__":
         print(json.dumps(result2, indent=2))
 
     asyncio.run(test())
+    
