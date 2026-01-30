@@ -35,6 +35,12 @@ except ImportError as e:
 
 from agent import process_job
 
+# Optional: enable debug logging for Masumi payment status (set DEBUG_MASUMI=1 when troubleshooting)
+if os.getenv("DEBUG_MASUMI", "").strip().lower() in ("1", "true", "yes"):
+    import logging
+    logging.getLogger("masumi").setLevel(logging.DEBUG)
+    print("✓ Masumi debug logging enabled (payment status responses will be logged)")
+
 # Define input schema - Clean and concise for better UI presentation
 INPUT_SCHEMA = {
     "input_data": [
